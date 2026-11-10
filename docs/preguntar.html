@@ -58,7 +58,27 @@
         <textarea id="pregunta" placeholder="Escribe tu pregunta…" maxlength="1500" rows="1"></textarea>
         <button class="boton" id="enviar" type="submit">Enviar</button>
       </form>
+      <p class="ayuda" id="totalConv" hidden></p>
       <p class="ayuda">Las respuestas pueden contener errores: contrasta los datos importantes con la fuente original.</p>
+      <details class="ayuda metodo">
+        <summary>¿Cómo se calcula el consumo de luz y agua?</summary>
+        <p><b>Tokens:</b> son exactos. Los cuenta la propia IA (Claude) en cada respuesta. Un token es, más o menos, ¾ de palabra.
+          «Leídos» incluye tu pregunta y los fragmentos de la biblioteca que se le pasan; «generados» incluye la respuesta y el razonamiento interno del modelo.</p>
+        <p><b>Luz y agua:</b> son una <b>estimación</b>. Anthropic, la empresa de Claude, no publica cuánto consume cada consulta,
+          así que calculamos por token a partir de las cifras que sí han publicado otras empresas para una consulta de texto completa,
+          contando la refrigeración y los servidores en reposo:</p>
+        <ul>
+          <li>Google (agosto 2025): mediana de 0,24 Wh y 0,26 mL de agua por consulta a Gemini.</li>
+          <li>OpenAI (junio 2025): 0,34 Wh por consulta media a ChatGPT. Epoch AI (2025): unos 0,3 Wh por consulta a GPT-4o.</li>
+        </ul>
+        <p>De ahí sale una media de <b>1 mWh por token generado</b> (horquilla de 0,3 a 3) y <b>0,05 mWh por token leído</b> (de 0,01 a 0,15), porque leer cuesta mucho menos que escribir.
+          En modelos más pequeños se aplica un factor menor.</p>
+        <p>El <b>agua</b> suma la que se evapora para refrigerar el centro de datos y la que se consume al producir la electricidad
+          (Li et al., 2023, «Making AI Less Thirsty»): una media de <b>2,5 mL por Wh</b> (de 1,1 a 5).</p>
+        <p>Por eso damos un valor central y una horquilla. La cifra real depende del centro de datos, del momento y del hardware, y puede estar en cualquier punto de ese rango.
+          No incluye la energía usada para entrenar el modelo ni para fabricar los equipos.</p>
+        <p>Equivalencias: una bombilla LED de 10 W gasta 1 Wh en 6 minutos; una gota de agua son unos 0,05 mL.</p>
+      </details>
     </div>
   </section>
 </main>
@@ -140,6 +160,35 @@ function referencias(fuentes) {
   }${f.autor ? " — " + esc(f.autor) : ""}${f.anio ? " (" + esc(f.anio) + ")" : ""} · ${esc(f.municipio)}</div>`).join("")}</div>`;
 }
 
+// ---------- Consumo ----------
+const num = (n, d = 0) => n.toLocaleString("es-ES", { maximumFractionDigits: d, minimumFractionDigits: 0 });
+const cifra = (n) => n >= 10 ? num(n, 0) : n >= 1 ? num(n, 1) : n >= 0.1 ? num(n, 2) : num(n, 3);
+function led(wh) {               // tiempo de una bombilla LED de 10 W
+  const s = wh / 10 * 3600;
+  return s < 60 ? `${num(Math.max(s, 0.1), s < 10 ? 1 : 0)} s` : `${num(s / 60, 1)} min`;
+}
+function gotas(ml) { const g = ml / 0.05; return g < 1 ? "menos de 1 gota" : `${num(g, 0)} gota${g >= 1.5 ? "s" : ""}`; }
+
+let total = { entrada: 0, salida: 0, wh: 0, ml: 0, preguntas: 0 };
+
+function lineaConsumo(c) {
+  if (!c) return "";
+  if (!c.tokens.total) return `<div class="gasto">🔢 0 tokens · no se ha usado la IA porque no había documentos sobre el tema</div>`;
+  const e = c.energia_wh, a = c.agua_ml;
+  return `<div class="gasto">
+    <span title="Tokens leídos (pregunta + fragmentos) y generados (respuesta + razonamiento)">🔢 <b>${num(c.tokens.total)}</b> tokens (${num(c.tokens.entrada)} leídos · ${num(c.tokens.salida)} generados)</span>
+    <span title="Estimación: valor central y horquilla">⚡ ~<b>${cifra(e.central)} Wh</b> <small>(${cifra(e.min)}–${cifra(e.max)})</small> ≈ una bombilla LED ${led(e.central)}</span>
+    <span title="Estimación: refrigeración + producción eléctrica">💧 ~<b>${cifra(a.central)} mL</b> <small>(${cifra(a.min)}–${cifra(a.max)})</small> ≈ ${gotas(a.central)}</span>
+  </div>`;
+}
+
+function pintarTotal() {
+  const t = $("totalConv");
+  t.hidden = !total.preguntas;
+  t.innerHTML = `En esta conversación: <b>${total.preguntas}</b> pregunta${total.preguntas > 1 ? "s" : ""} ·
+    🔢 ${num(total.entrada + total.salida)} tokens · ⚡ ~${cifra(total.wh)} Wh · 💧 ~${cifra(total.ml)} mL`;
+}
+
 async function preguntar(texto) {
   texto = texto.trim();
   if (!texto) return;
@@ -154,7 +203,12 @@ async function preguntar(texto) {
     });
     if (error) throw new Error(await errorDe(error));
     espera.textContent = data.respuesta;
-    espera.insertAdjacentHTML("beforeend", referencias(data.fuentes));
+    espera.insertAdjacentHTML("beforeend", referencias(data.fuentes) + lineaConsumo(data.consumo));
+    if (data.consumo) {
+      total.preguntas++; total.entrada += data.consumo.tokens.entrada; total.salida += data.consumo.tokens.salida;
+      total.wh += data.consumo.energia_wh.central; total.ml += data.consumo.agua_ml.central;
+      pintarTotal();
+    }
     historial.push({ rol: "usuario", texto }, { rol: "asistente", texto: data.respuesta });
     historial = historial.slice(-6);
   } catch (e) {
@@ -175,6 +229,7 @@ $("pregunta").addEventListener("input", ajustar);
 document.querySelectorAll(".sugerencias button").forEach((b) => b.onclick = () => preguntar(b.textContent));
 $("nueva").onclick = () => {
   historial = [];
+  total = { entrada: 0, salida: 0, wh: 0, ml: 0, preguntas: 0 }; pintarTotal();
   [...$("mensajes").children].forEach((c) => { if (c.id !== "bienvenida") c.remove(); });
 };
 </script>

@@ -84,7 +84,13 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--azul); outl
 .msg.ia { align-self: flex-start; background: var(--tarjeta); border: 1px solid var(--borde); border-bottom-left-radius: 4px; }
 .msg .refs { white-space: normal; margin-top: 10px; padding-top: 8px; border-top: 1px dashed var(--borde); font-size: 13px; color: var(--suave); }
 .msg .refs div { margin-top: 3px; }
-.escribir { display: flex; gap: 8px; align-items: flex-end; position: sticky; bottom: 0; background: var(--fondo); padding: 10px 0; }
+.msg .gasto { white-space: normal; margin-top: 8px; padding: 7px 10px; border-radius: 8px; background: var(--verde-claro);
+  font-size: 12.5px; color: var(--texto); display: flex; flex-wrap: wrap; gap: 4px 14px; }
+.msg .gasto small { color: var(--suave); }
+.metodo { margin-top: 10px; background: var(--tarjeta); border: 1px solid var(--borde); border-radius: 10px; padding: 10px 14px; }
+.metodo summary { cursor: pointer; font-weight: 600; color: var(--texto); }
+.metodo ul { padding-left: 20px; }
+.escribir {display: flex; gap: 8px; align-items: flex-end; position: sticky; bottom: 0; background: var(--fondo); padding: 10px 0; }
 .escribir textarea { min-height: 48px; max-height: 160px; }
 .barra { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-bottom: 14px; }
 .barra select { width: auto; }

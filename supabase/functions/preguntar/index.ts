@@ -27,7 +27,37 @@ const CLAVE = Object.entries(Deno.env.toObject())
   .find(([k]) => k.trim() === "ANTHROPIC_API_KEY")?.[1]?.trim();
 const anthropic = CLAVE ? new Anthropic({ apiKey: CLAVE }) : null;
 
-type Turno = { rol: "usuario" | "asistente"; texto: string };
+// ---------- Estimación de consumo ----------
+// Anthropic no publica energía ni agua por consulta. Se estima por token, calibrando con las cifras
+// públicas de consultas de texto completas (incluyen refrigeración, PUE y servidores en reposo):
+//   Google (ago. 2025): mediana 0,24 Wh y 0,26 mL por consulta a Gemini.
+//   OpenAI (jun. 2025): 0,34 Wh por consulta media a ChatGPT.  Epoch AI (2025): ~0,3 Wh GPT-4o.
+// Esas consultas tienen ~300-500 tokens de salida -> ~0,5-1 mWh por token generado en modelos grandes.
+// Leer (entrada) cuesta mucho menos por token que generar (salida).
+// Agua: refrigeración del centro de datos + agua usada al producir la electricidad
+//   (Li et al. 2023, «Making AI Less Thirsty»). Solo Google in situ: ~1,1 mL/Wh.
+const CONSUMO = {
+  mWhSalida:  { min: 0.3,  central: 1.0,  max: 3.0 },   // por token generado (incluye razonamiento)
+  mWhEntrada: { min: 0.01, central: 0.05, max: 0.15 },  // por token leído
+  mLporWh:    { min: 1.1,  central: 2.5,  max: 5.0 },   // agua total por Wh
+};
+// Tamaño relativo del modelo (aproximado): los pequeños gastan bastante menos por token
+const FACTOR_MODELO = /haiku/.test(MODELO) ? 0.2 : /sonnet/.test(MODELO) ? 0.5 : 1;
+
+function consumo(entrada: number, salida: number) {
+  const r = (k: "min" | "central" | "max") => {
+    const wh = (entrada * CONSUMO.mWhEntrada[k] + salida * CONSUMO.mWhSalida[k]) * FACTOR_MODELO / 1000;
+    return { wh, ml: wh * CONSUMO.mLporWh[k] };
+  };
+  const [a, c, b] = [r("min"), r("central"), r("max")];
+  return {
+    tokens: { entrada, salida, total: entrada + salida },
+    energia_wh: { min: a.wh, central: c.wh, max: b.wh },
+    agua_ml: { min: a.ml, central: c.ml, max: b.ml },
+  };
+}
+
+type Turno ={ rol: "usuario" | "asistente"; texto: string };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -69,6 +99,7 @@ Deno.serve(async (req) => {
     return json({
       respuesta: "No encuentro nada sobre eso en la biblioteca todavía. Si conoces algún documento o web que lo trate, apórtalo en la página «Aportar bibliografía» y podré responderte.",
       fuentes: [],
+      consumo: consumo(0, 0),
     });
   }
 
@@ -116,8 +147,14 @@ Deno.serve(async (req) => {
 
   await db.from("consultas").insert({ user_id: u.user.id });
 
+  const us = resp.usage;
+  const gasto = consumo(
+    (us.input_tokens ?? 0) + (us.cache_creation_input_tokens ?? 0) + (us.cache_read_input_tokens ?? 0),
+    us.output_tokens ?? 0,
+  );
+
   if (resp.stop_reason === "refusal") {
-    return json({ respuesta: "No puedo responder a esa pregunta.", fuentes: [] });
+    return json({ respuesta: "No puedo responder a esa pregunta.", fuentes: [], consumo: gasto });
   }
 
   // Monta la respuesta con llamadas [n]; varios fragmentos del mismo documento comparten número
@@ -143,5 +180,5 @@ Deno.serve(async (req) => {
     return { n, id, titulo: f.titulo, autor: f.autor, anio: f.anio, municipio: f.municipio, url: f.url };
   });
 
-  return json({ respuesta: respuesta.trim(), fuentes });
+  return json({ respuesta: respuesta.trim(), fuentes, consumo: gasto });
 });
