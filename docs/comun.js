@@ -1,7 +1,7 @@
 // Configuración del proyecto Supabase (la clave publicable es pública por diseño; la seguridad está en RLS)
 window.CONFIG = {
-  url: "PENDIENTE_URL_SUPABASE",
-  clave: "PENDIENTE_CLAVE_PUBLICABLE",
+  url: "https://vbgvoarxdynredspzuxr.supabase.co",
+  clave: "sb_publishable_EdYQrJVIMMRcNxlh6fylqg_sKnYLTJL",
 };
 
 window.MUNICIPIOS = [

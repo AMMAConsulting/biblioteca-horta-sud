@@ -8,7 +8,7 @@ enable_signup = true
 minimum_password_length = 8
 
 [auth.email]
-enable_signup = true
+enabled = true
 # Sin correo de confirmación: el SMTP gratuito de Supabase solo manda ~2 correos/hora.
 # Para exigir confirmación, configurar antes un SMTP propio (p. ej. Brevo) y poner true.
 enable_confirmations = false
