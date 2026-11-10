@@ -38,6 +38,7 @@
 
   <!-- Chat -->
   <section id="zonaChat" hidden>
+    <div class="contador" id="contador" hidden></div>
     <div class="barra">
       <label for="municipio" style="margin:0">Municipio:</label>
       <select id="municipio"></select>
@@ -139,6 +140,7 @@ sb.auth.onAuthStateChange((_ev, sesion) => {
   if (sesion) {
     const md = sesion.user.user_metadata || {};
     $("quien").textContent = md.nombre || sesion.user.email;
+    pintarContador();
     setTimeout(() => $("pregunta").focus(), 50);
   }
 });
@@ -158,6 +160,19 @@ function referencias(fuentes) {
   return `<div class="refs"><b>Fuentes</b>${fuentes.map((f) => `<div>[${f.n}] ${
     f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>` : esc(f.titulo)
   }${f.autor ? " — " + esc(f.autor) : ""}${f.anio ? " (" + esc(f.anio) + ")" : ""} · ${esc(f.municipio)}</div>`).join("")}</div>`;
+}
+
+// ---------- Contador global ----------
+async function pintarContador() {
+  const e = await cargarEstadisticas();
+  if (!e) return;
+  const c = $("contador");
+  c.hidden = false;
+  c.innerHTML = `<span class="tit">Entre todos</span>
+    <span><b>${fmt(e.preguntas)}</b> preguntas</span>
+    <span>🔢 <b>${fmt(e.tokens)}</b> tokens</span>
+    <span title="Horquilla ${energia(e.wh.min)} – ${energia(e.wh.max)}">⚡ ~<b>${energia(e.wh.central)}</b> <small>≈ LED ${equivalenciaLuz(e.wh.central)}</small></span>
+    <span title="Horquilla ${agua(e.ml.min)} – ${agua(e.ml.max)}">💧 ~<b>${agua(e.ml.central)}</b> <small>≈ ${equivalenciaAgua(e.ml.central)}</small></span>`;
 }
 
 // ---------- Consumo ----------
@@ -209,6 +224,7 @@ async function preguntar(texto) {
       total.wh += data.consumo.energia_wh.central; total.ml += data.consumo.agua_ml.central;
       pintarTotal();
     }
+    pintarContador();
     historial.push({ rol: "usuario", texto }, { rol: "asistente", texto: data.respuesta });
     historial = historial.slice(-6);
   } catch (e) {

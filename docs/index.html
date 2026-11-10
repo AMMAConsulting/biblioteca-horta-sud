@@ -43,13 +43,15 @@
 <script src="comun.js"></script>
 <script>
 (async () => {
-  const { data } = await sb.from("fuentes").select("municipio,n_fragmentos");
-  if (!data) return;
-  const munis = new Set(data.map((f) => f.municipio));
+  const e = await cargarEstadisticas();
+  if (!e) return;
   document.getElementById("cifras").innerHTML = `
-    <div class="cifra"><b>${data.length}</b><span>documentos aportados</span></div>
-    <div class="cifra"><b>${munis.size}</b><span>municipios con material</span></div>
-    <div class="cifra"><b>${data.reduce((s, f) => s + f.n_fragmentos, 0)}</b><span>fragmentos consultables</span></div>`;
+    <div class="cifra"><b>${fmt(e.documentos)}</b><span>documentos aportados</span></div>
+    <div class="cifra"><b>${fmt(e.usuarios)}</b><span>personas registradas</span></div>
+    <div class="cifra"><b>${fmt(e.preguntas)}</b><span>preguntas respondidas</span></div>
+    <div class="cifra"><b>${fmt(e.tokens)}</b><span>tokens procesados</span></div>
+    <div class="cifra" title="Estimación; horquilla ${energia(e.wh.min)} – ${energia(e.wh.max)}"><b>⚡ ${energia(e.wh.central)}</b><span>de luz (≈ LED ${equivalenciaLuz(e.wh.central)})</span></div>
+    <div class="cifra" title="Estimación; horquilla ${agua(e.ml.min)} – ${agua(e.ml.max)}"><b>💧 ${agua(e.ml.central)}</b><span>de agua (≈ ${equivalenciaAgua(e.ml.central)})</span></div>`;
 })();
 </script>
 </body>

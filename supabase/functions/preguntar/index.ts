@@ -57,7 +57,18 @@ function consumo(entrada: number, salida: number) {
   };
 }
 
-type Turno ={ rol: "usuario" | "asistente"; texto: string };
+// Guarda solo las cifras de la pregunta (nunca el texto), para el límite diario y el contador público
+async function registrar(db: ReturnType<typeof admin>, userId: string, c: ReturnType<typeof consumo>, usoIa: boolean) {
+  const { error } = await db.from("consultas").insert({
+    user_id: userId, uso_ia: usoIa,
+    tokens_entrada: c.tokens.entrada, tokens_salida: c.tokens.salida,
+    wh_min: c.energia_wh.min, wh: c.energia_wh.central, wh_max: c.energia_wh.max,
+    ml_min: c.agua_ml.min, ml: c.agua_ml.central, ml_max: c.agua_ml.max,
+  });
+  if (error) console.error(error);
+}
+
+type Turno = { rol: "usuario" | "asistente"; texto: string };
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: CORS });
@@ -96,6 +107,7 @@ Deno.serve(async (req) => {
   });
   if (eb) { console.error(eb); return json({ error: "Error al buscar en la biblioteca." }, 500); }
   if (!frags?.length) {
+    await registrar(db, u.user.id, consumo(0, 0), false);
     return json({
       respuesta: "No encuentro nada sobre eso en la biblioteca todavía. Si conoces algún documento o web que lo trate, apórtalo en la página «Aportar bibliografía» y podré responderte.",
       fuentes: [],
@@ -145,13 +157,13 @@ Deno.serve(async (req) => {
     return json({ error: "El asistente no está disponible ahora mismo. Inténtalo de nuevo." }, 503);
   }
 
-  await db.from("consultas").insert({ user_id: u.user.id });
-
   const us = resp.usage;
   const gasto = consumo(
     (us.input_tokens ?? 0) + (us.cache_creation_input_tokens ?? 0) + (us.cache_read_input_tokens ?? 0),
     us.output_tokens ?? 0,
   );
+
+  await registrar(db, u.user.id, gasto, true);
 
   if (resp.stop_reason === "refusal") {
     return json({ respuesta: "No puedo responder a esa pregunta.", fuentes: [], consumo: gasto });

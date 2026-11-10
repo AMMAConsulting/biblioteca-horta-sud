@@ -101,3 +101,7 @@ input:focus, select:focus, textarea:focus { outline: 2px solid var(--azul); outl
 
 footer { max-width: 1040px; margin: 0 auto; padding: 20px 16px 40px; font-size: 13px; color: var(--suave); }
 @media (max-width: 560px) { .msg { max-width: 95%; } .tarjeta { padding: 16px; } }
+.contador { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; background: var(--tarjeta);
+  border: 1px solid var(--borde); border-left: 4px solid var(--verde); border-radius: 10px; padding: 9px 14px; margin-bottom: 14px; font-size: 14px; }
+.contador .tit { font-weight: 700; color: var(--azul); }
+.contador small { color: var(--suave); }
