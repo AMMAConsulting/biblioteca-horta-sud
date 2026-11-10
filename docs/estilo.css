@@ -105,3 +105,16 @@ footer { max-width: 1040px; margin: 0 auto; padding: 20px 16px 40px; font-size: 
   border: 1px solid var(--borde); border-left: 4px solid var(--verde); border-radius: 10px; padding: 9px 14px; margin-bottom: 14px; font-size: 14px; }
 .contador .tit { font-weight: 700; color: var(--azul); }
 .contador small { color: var(--suave); }
+
+/* Respuestas con formato */
+.msg.ia .cuerpo { white-space: normal; line-height: 1.6; }
+.msg.ia .cuerpo p { margin: 0 0 10px; }
+.msg.ia .cuerpo p:last-child, .msg.ia .cuerpo ul:last-child, .msg.ia .cuerpo ol:last-child { margin-bottom: 0; }
+.msg.ia .cuerpo ul, .msg.ia .cuerpo ol { margin: 4px 0 12px; padding-left: 22px; }
+.msg.ia .cuerpo li { margin: 4px 0; }
+.msg.ia .cuerpo li::marker { color: var(--verde); }
+.msg.ia .cuerpo strong { color: var(--azul); font-weight: 650; }
+.msg.ia .cuerpo .subt { font-weight: 700; margin-top: 12px; }
+.cita { display: inline-block; min-width: 17px; height: 17px; line-height: 17px; text-align: center; font-size: 11px; font-weight: 700;
+  border-radius: 9px; background: var(--azul-claro); color: var(--azul); margin-left: 2px; vertical-align: super; padding: 0 4px; }
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .msg.ia .cuerpo strong { color: #8fb0ff; } :root:not([data-theme="light"]) .cita { color: #b9cbff; } }

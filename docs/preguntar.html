@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Preguntar a la biblioteca</title>
-<link rel="stylesheet" href="estilo.css?v=3">
+<link rel="stylesheet" href="estilo.css?v=4">
 </head>
 <body>
 <header class="cabecera"><div class="dentro">
@@ -85,7 +85,7 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="comun.js?v=3"></script>
+<script src="comun.js?v=4"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let accion = "entrar";
@@ -155,6 +155,42 @@ function burbuja(clase, texto) {
   return d;
 }
 
+// Convierte el formato sencillo de la IA (negritas, listas, párrafos) en HTML seguro
+function enLinea(t) {
+  return esc(t)
+    .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
+    .replace(/(^|[^*\w])\*(?!\s)([^*]+?)\*(?!\w)/g, "$1<em>$2</em>")
+    .replace(/\s*((?:\[\d+\])+)/g, (_, g) => " " + g.match(/\d+/g).map((n) => `<sup class="cita" title="Fuente ${n}">${n}</sup>`).join(""))
+    .replace(/(<sup class="cita"[^>]*>(\d+)<\/sup>)(?:\s*<sup class="cita"[^>]*>\2<\/sup>)+/g, "$1");
+}
+function markdown(texto) {
+  const lineas = String(texto ?? "").replace(/\r/g, "").split("\n");
+  let html = "", lista = null, parrafo = [];
+  const cerrarP = () => { if (parrafo.length) { html += `<p>${enLinea(parrafo.join(" "))}</p>`; parrafo = []; } };
+  const cerrarL = () => { if (lista) { html += `</${lista}>`; lista = null; } };
+  for (const l of lineas) {
+    const t = l.trim();
+    const vineta = t.match(/^[-*•]\s+(.*)$/), numero = t.match(/^\d+[.)]\s+(.*)$/), titulo = t.match(/^#{1,6}\s+(.*)$/);
+    if (!t) { cerrarP(); cerrarL(); continue; }
+    if (vineta || numero) {
+      cerrarP();
+      const tipo = vineta ? "ul" : "ol";
+      if (lista !== tipo) { cerrarL(); html += `<${tipo}>`; lista = tipo; }
+      html += `<li>${enLinea((vineta || numero)[1])}</li>`;
+      continue;
+    }
+    if (titulo) { cerrarP(); cerrarL(); html += `<p class="subt">${enLinea(titulo[1])}</p>`; continue; }
+    if (/^((?:\[\d+\])+)$/.test(t) && (parrafo.length || lista)) {   // llamada a fuente suelta en su línea
+      if (parrafo.length) parrafo[parrafo.length - 1] += " " + t;
+      else html = html.replace(/<\/li>$/, enLinea(" " + t) + "</li>");
+      continue;
+    }
+    cerrarL(); parrafo.push(t);
+  }
+  cerrarP(); cerrarL();
+  return html;
+}
+
 function referencias(fuentes) {
   if (!fuentes?.length) return "";
   return `<div class="refs"><b>Fuentes</b>${fuentes.map((f) => `<div>[${f.n}] ${
@@ -217,7 +253,7 @@ async function preguntar(texto) {
       body: { pregunta: texto, municipio: $("municipio").value, historial },
     });
     if (error) throw new Error(await errorDe(error));
-    espera.textContent = data.respuesta;
+    espera.innerHTML = `<div class="cuerpo">${markdown(data.respuesta)}</div>`;
     espera.insertAdjacentHTML("beforeend", referencias(data.fuentes) + lineaConsumo(data.consumo));
     if (data.consumo) {
       total.preguntas++; total.entrada += data.consumo.tokens.entrada; total.salida += data.consumo.tokens.salida;
