@@ -118,3 +118,33 @@ footer { max-width: 1040px; margin: 0 auto; padding: 20px 16px 40px; font-size: 
 .cita { display: inline-block; min-width: 17px; height: 17px; line-height: 17px; text-align: center; font-size: 11px; font-weight: 700;
   border-radius: 9px; background: var(--azul-claro); color: var(--azul); margin-left: 2px; vertical-align: super; padding: 0 4px; }
 @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .msg.ia .cuerpo strong { color: #8fb0ff; } :root:not([data-theme="light"]) .cita { color: #b9cbff; } }
+
+/* --- Respuestas más legibles (v5) --- */
+.msg.ia { max-width: min(760px, 100%); padding: 18px 22px; border-radius: 16px; border-bottom-left-radius: 4px;
+  box-shadow: 0 1px 2px #0000000d; white-space: normal; }
+.msg.ia .cuerpo { font-size: 16.5px; line-height: 1.7; }
+.msg.ia .cuerpo p { margin: 0 0 14px; }
+.msg.ia .cuerpo p:first-child { font-size: 17.5px; }
+.msg.ia .cuerpo ul, .msg.ia .cuerpo ol { margin: 6px 0 16px; padding-left: 4px; list-style: none; }
+.msg.ia .cuerpo li { position: relative; padding-left: 22px; margin: 7px 0; }
+.msg.ia .cuerpo ul li::before { content: ""; position: absolute; left: 4px; top: .7em; width: 7px; height: 7px; border-radius: 50%; background: var(--verde); }
+.msg.ia .cuerpo ol { counter-reset: n; }
+.msg.ia .cuerpo ol li::before { counter-increment: n; content: counter(n); position: absolute; left: 0; top: .15em; font-size: 12px; font-weight: 700;
+  width: 17px; height: 17px; line-height: 17px; text-align: center; border-radius: 50%; background: var(--verde-claro); color: var(--texto); }
+.msg.ia .cuerpo strong { color: inherit; font-weight: 700; background: linear-gradient(transparent 62%, #1ADEB155 0); }
+.cita { min-width: 15px; height: 15px; line-height: 15px; font-size: 10px; margin-left: 3px; vertical-align: 5px; opacity: .85; }
+
+.msg .refs { margin-top: 14px; padding-top: 12px; border-top: 1px solid var(--borde); display: grid; gap: 6px; font-size: 13.5px; color: var(--texto); }
+.msg .refs .ref { display: flex; gap: 9px; align-items: flex-start; }
+.msg .refs .ref-n { flex: none; min-width: 20px; height: 20px; line-height: 20px; text-align: center; border-radius: 6px;
+  background: var(--azul-claro); color: var(--azul); font-size: 11px; font-weight: 700; }
+.msg .refs small { display: block; color: var(--suave); font-size: 12px; }
+
+.msg .gasto { display: block; background: none; padding: 0; margin-top: 10px; font-size: 12px; color: var(--suave); }
+.msg details.gasto summary { cursor: pointer; list-style: none; }
+.msg details.gasto summary::-webkit-details-marker { display: none; }
+.msg details.gasto summary::after { content: " ▾"; }
+.msg details.gasto[open] summary::after { content: " ▴"; }
+.msg details.gasto div { margin-top: 4px; }
+.msg.yo { padding: 11px 16px; font-size: 16px; }
+@media (max-width: 560px) { .msg.ia { padding: 14px 15px; } .msg.ia .cuerpo { font-size: 16px; } .msg.ia .cuerpo p:first-child { font-size: 16.5px; } }

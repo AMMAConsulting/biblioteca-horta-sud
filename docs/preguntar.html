@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Preguntar a la biblioteca</title>
-<link rel="stylesheet" href="estilo.css?v=4">
+<link rel="stylesheet" href="estilo.css?v=5">
 </head>
 <body>
 <header class="cabecera"><div class="dentro">
@@ -85,7 +85,7 @@
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="comun.js?v=4"></script>
+<script src="comun.js?v=5"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let accion = "entrar";
@@ -156,8 +156,14 @@ function burbuja(clase, texto) {
 }
 
 // Convierte el formato sencillo de la IA (negritas, listas, párrafos) en HTML seguro
+// Agrupa las llamadas a fuentes de un bloque (párrafo o punto de lista) al final, sin repetir
+function citasAlFinal(t) {
+  const ns = [];
+  const limpio = t.replace(/\s*((?:\[\d+\])+)/g, (_, g) => { g.match(/\d+/g).forEach((n) => ns.includes(n) || ns.push(n)); return ""; });
+  return ns.length ? limpio.trimEnd() + " " + ns.map((n) => `[${n}]`).join("") : limpio;
+}
 function enLinea(t) {
-  return esc(t)
+  return esc(citasAlFinal(t))
     .replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>")
     .replace(/(^|[^*\w])\*(?!\s)([^*]+?)\*(?!\w)/g, "$1<em>$2</em>")
     .replace(/\s*((?:\[\d+\])+)/g, (_, g) => " " + g.match(/\d+/g).map((n) => `<sup class="cita" title="Fuente ${n}">${n}</sup>`).join(""))
@@ -193,9 +199,12 @@ function markdown(texto) {
 
 function referencias(fuentes) {
   if (!fuentes?.length) return "";
-  return `<div class="refs"><b>Fuentes</b>${fuentes.map((f) => `<div>[${f.n}] ${
-    f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>` : esc(f.titulo)
-  }${f.autor ? " — " + esc(f.autor) : ""}${f.anio ? " (" + esc(f.anio) + ")" : ""} · ${esc(f.municipio)}</div>`).join("")}</div>`;
+  const una = fuentes.length === 1;
+  return `<div class="refs">${fuentes.map((f) => `<div class="ref">
+    <span class="ref-n">${una ? "📄" : f.n}</span>
+    <span>${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>` : esc(f.titulo)}
+      <small>${[f.autor, f.anio, f.municipio].filter(Boolean).map(esc).join(" · ")}</small></span>
+  </div>`).join("")}</div>`;
 }
 
 // ---------- Contador global ----------
@@ -224,13 +233,14 @@ let total = { entrada: 0, salida: 0, wh: 0, ml: 0, preguntas: 0 };
 
 function lineaConsumo(c) {
   if (!c) return "";
-  if (!c.tokens.total) return `<div class="gasto">🔢 0 tokens · no se ha usado la IA porque no había documentos sobre el tema</div>`;
+  if (!c.tokens.total) return `<div class="gasto">Sin consumo: no se ha usado la IA porque no había documentos sobre el tema</div>`;
   const e = c.energia_wh, a = c.agua_ml;
-  return `<div class="gasto">
-    <span title="Tokens leídos (pregunta + fragmentos) y generados (respuesta + razonamiento)">🔢 <b>${num(c.tokens.total)}</b> tokens (${num(c.tokens.entrada)} leídos · ${num(c.tokens.salida)} generados)</span>
-    <span title="Estimación: valor central y horquilla">⚡ ~<b>${cifra(e.central)} Wh</b> <small>(${cifra(e.min)}–${cifra(e.max)})</small> ≈ una bombilla LED encendida ${led(e.central)}</span>
-    <span title="Estimación: refrigeración + producción eléctrica">💧 ~<b>${cifra(a.central)} mL</b> <small>(${cifra(a.min)}–${cifra(a.max)})</small> ≈ ${gotas(a.central)}</span>
-  </div>`;
+  return `<details class="gasto">
+    <summary>🔢 ${num(c.tokens.total)} tokens · ⚡ ~${cifra(e.central)} Wh · 💧 ~${cifra(a.central)} mL</summary>
+    <div>${num(c.tokens.entrada)} tokens leídos (pregunta y fragmentos) y ${num(c.tokens.salida)} generados (respuesta y razonamiento).</div>
+    <div>Luz: entre ${cifra(e.min)} y ${cifra(e.max)} Wh ≈ una bombilla LED encendida ${led(e.central)}.</div>
+    <div>Agua: entre ${cifra(a.min)} y ${cifra(a.max)} mL ≈ ${gotas(a.central)}. Luz y agua son estimaciones.</div>
+  </details>`;
 }
 
 function pintarTotal() {
@@ -253,7 +263,10 @@ async function preguntar(texto) {
       body: { pregunta: texto, municipio: $("municipio").value, historial },
     });
     if (error) throw new Error(await errorDe(error));
-    espera.innerHTML = `<div class="cuerpo">${markdown(data.respuesta)}</div>`;
+    let cuerpo = markdown(data.respuesta);
+    // Con una sola fuente, los numeritos sobran: basta con la ficha de la fuente al pie
+    if ((data.fuentes || []).length <= 1) cuerpo = cuerpo.replace(/\s*<sup class="cita"[^>]*>\d+<\/sup>/g, "");
+    espera.innerHTML = `<div class="cuerpo">${cuerpo}</div>`;
     espera.insertAdjacentHTML("beforeend", referencias(data.fuentes) + lineaConsumo(data.consumo));
     if (data.consumo) {
       total.preguntas++; total.entrada += data.consumo.tokens.entrada; total.salida += data.consumo.tokens.salida;
