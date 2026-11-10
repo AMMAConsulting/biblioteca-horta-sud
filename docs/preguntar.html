@@ -177,7 +177,7 @@ function lineaConsumo(c) {
   const e = c.energia_wh, a = c.agua_ml;
   return `<div class="gasto">
     <span title="Tokens leídos (pregunta + fragmentos) y generados (respuesta + razonamiento)">🔢 <b>${num(c.tokens.total)}</b> tokens (${num(c.tokens.entrada)} leídos · ${num(c.tokens.salida)} generados)</span>
-    <span title="Estimación: valor central y horquilla">⚡ ~<b>${cifra(e.central)} Wh</b> <small>(${cifra(e.min)}–${cifra(e.max)})</small> ≈ una bombilla LED ${led(e.central)}</span>
+    <span title="Estimación: valor central y horquilla">⚡ ~<b>${cifra(e.central)} Wh</b> <small>(${cifra(e.min)}–${cifra(e.max)})</small> ≈ una bombilla LED encendida ${led(e.central)}</span>
     <span title="Estimación: refrigeración + producción eléctrica">💧 ~<b>${cifra(a.central)} mL</b> <small>(${cifra(a.min)}–${cifra(a.max)})</small> ≈ ${gotas(a.central)}</span>
   </div>`;
 }
