@@ -1,0 +1,22 @@
+project_id = "biblioteca-horta-sud"
+
+[auth]
+enabled = true
+site_url = "https://ammaconsulting.github.io/biblioteca-horta-sud/"
+additional_redirect_urls = ["https://ammaconsulting.github.io/biblioteca-horta-sud/preguntar.html"]
+enable_signup = true
+minimum_password_length = 8
+
+[auth.email]
+enable_signup = true
+# Sin correo de confirmación: el SMTP gratuito de Supabase solo manda ~2 correos/hora.
+# Para exigir confirmación, configurar antes un SMTP propio (p. ej. Brevo) y poner true.
+enable_confirmations = false
+double_confirm_changes = true
+
+[functions.aportar]
+verify_jwt = false
+
+[functions.preguntar]
+# La función comprueba ella misma la sesión del usuario
+verify_jwt = false

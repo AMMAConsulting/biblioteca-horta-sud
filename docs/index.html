@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Biblioteca de L'Horta Sud</title>
+<meta name="description" content="Bibliografía abierta sobre los 20 municipios de L'Horta Sud y un asistente que responde a partir de ella.">
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<header class="cabecera"><div class="dentro">
+  <a class="marca" href="./"><span class="punto"></span>Biblioteca de L'Horta Sud</a>
+  <nav class="nav"><a href="aportar.html">Aportar</a><a href="preguntar.html">Preguntar</a></nav>
+</div></header>
+
+<main>
+  <h1>Todo lo que se sabe de L'Horta Sud, en un mismo sitio</h1>
+  <p class="intro">Entre todos reunimos estudios, informes, webs y documentos sobre los 20 municipios de la comarca.
+    Después, un asistente responde a tus preguntas usando solo esa bibliografía e indica de qué documento sale cada dato.</p>
+
+  <div class="rejilla">
+    <a class="tarjeta puerta" href="aportar.html">
+      <h2>📚 Aportar bibliografía</h2>
+      <p>Sube un PDF o un Word, pega un enlace o escribe un texto. No hace falta registrarse.</p>
+      <span class="ir">Aportar →</span>
+    </a>
+    <a class="tarjeta puerta azul" href="preguntar.html">
+      <h2>💬 Preguntar</h2>
+      <p>Crea tu cuenta y pregunta lo que quieras sobre cualquier municipio. Cada respuesta dice de dónde sale.</p>
+      <span class="ir">Preguntar →</span>
+    </a>
+  </div>
+
+  <div class="tarjeta" style="margin-top:18px">
+    <div class="cifras" id="cifras"><div class="cifra"><b>—</b><span>documentos</span></div></div>
+    <p class="ayuda" style="margin:0">Los 20 municipios: Alaquàs, Albal, Alcàsser, Aldaia, Alfafar, Benetússer, Beniparrell, Catarroja,
+      Llocnou de la Corona, Manises, Massanassa, Mislata, Paiporta, Picanya, Picassent, Quart de Poblet, Sedaví, Silla, Torrent y Xirivella.</p>
+  </div>
+</main>
+<footer>Proyecto desarrollado por AMMA Consulting. Las respuestas del asistente se basan en material aportado por los usuarios: contrasta los datos importantes con la fuente original.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="comun.js"></script>
+<script>
+(async () => {
+  const { data } = await sb.from("fuentes").select("municipio,n_fragmentos");
+  if (!data) return;
+  const munis = new Set(data.map((f) => f.municipio));
+  document.getElementById("cifras").innerHTML = `
+    <div class="cifra"><b>${data.length}</b><span>documentos aportados</span></div>
+    <div class="cifra"><b>${munis.size}</b><span>municipios con material</span></div>
+    <div class="cifra"><b>${data.reduce((s, f) => s + f.n_fragmentos, 0)}</b><span>fragmentos consultables</span></div>`;
+})();
+</script>
+</body>
+</html>

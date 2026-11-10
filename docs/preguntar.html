@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preguntar a la biblioteca</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<header class="cabecera"><div class="dentro">
+  <a class="marca" href="./"><span class="punto"></span>Biblioteca de L'Horta Sud</a>
+  <nav class="nav"><a href="aportar.html">Aportar</a><a class="activo" href="preguntar.html">Preguntar</a></nav>
+</div></header>
+
+<main>
+  <!-- Acceso -->
+  <section id="acceso" hidden>
+    <h1>Pregunta sobre L'Horta Sud</h1>
+    <p class="intro">Para preguntar necesitas una cuenta gratuita. El asistente responde solo con la bibliografía aportada y te dice de qué documento sale cada dato.</p>
+    <form class="tarjeta" id="formAcceso" style="max-width:440px" novalidate>
+      <div class="pestanas">
+        <button type="button" class="activa" data-a="entrar">Entrar</button>
+        <button type="button" data-a="registro">Crear cuenta</button>
+      </div>
+      <div data-solo="registro" hidden>
+        <label for="nombre">Nombre</label><input type="text" id="nombre" maxlength="80" autocomplete="name">
+        <label for="entidad">Entidad u organización <span class="opc">(opcional)</span></label><input type="text" id="entidad" maxlength="120">
+      </div>
+      <label for="correo">Correo electrónico</label><input type="email" id="correo" autocomplete="email" required>
+      <label for="clave">Contraseña</label><input type="password" id="clave" minlength="8" autocomplete="current-password" required>
+      <p class="ayuda" data-solo="registro" hidden>Mínimo 8 caracteres.</p>
+      <label class="check" data-solo="registro" hidden><input type="checkbox" id="privacidad">
+        <span>Acepto que se guarde mi correo y nombre para gestionar la cuenta. Las preguntas no se guardan; solo cuántas haces, para el límite diario.</span></label>
+      <div style="margin-top:16px"><button class="boton" id="botonAcceso" type="submit">Entrar</button></div>
+      <div id="estadoAcceso" class="aviso" hidden></div>
+    </form>
+  </section>
+
+  <!-- Chat -->
+  <section id="zonaChat" hidden>
+    <div class="barra">
+      <label for="municipio" style="margin:0">Municipio:</label>
+      <select id="municipio"></select>
+      <button class="boton claro" id="nueva" type="button">Nueva conversación</button>
+      <span class="quien"><span id="quien"></span> · <a href="#" id="salir">Salir</a></span>
+    </div>
+    <div class="chat">
+      <div class="mensajes" id="mensajes">
+        <div class="msg ia" id="bienvenida">Hola. Pregúntame lo que quieras sobre los municipios de L'Horta Sud. Respondo solo con los documentos de la biblioteca y te indico la fuente de cada dato.
+          <div class="sugerencias" style="margin-top:12px; white-space:normal">
+            <button type="button">¿Qué recursos turísticos tiene Catarroja?</button>
+            <button type="button">¿Cuántos habitantes tiene Torrent?</button>
+            <button type="button">¿Qué fiestas se celebran en Alaquàs?</button>
+          </div>
+        </div>
+      </div>
+      <form class="escribir" id="formPregunta">
+        <textarea id="pregunta" placeholder="Escribe tu pregunta…" maxlength="1500" rows="1"></textarea>
+        <button class="boton" id="enviar" type="submit">Enviar</button>
+      </form>
+      <p class="ayuda">Las respuestas pueden contener errores: contrasta los datos importantes con la fuente original.</p>
+    </div>
+  </section>
+</main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="comun.js"></script>
+<script>
+const $ = (id) => document.getElementById(id);
+let accion = "entrar";
+let historial = [];
+rellenarMunicipios($("municipio"));
+
+// ---------- Acceso ----------
+document.querySelectorAll("#formAcceso .pestanas button").forEach((b) => b.onclick = () => {
+  accion = b.dataset.a;
+  document.querySelectorAll("#formAcceso .pestanas button").forEach((x) => x.classList.toggle("activa", x === b));
+  document.querySelectorAll("[data-solo]").forEach((e) => e.hidden = e.dataset.solo !== accion);
+  $("botonAcceso").textContent = accion === "entrar" ? "Entrar" : "Crear cuenta";
+  $("clave").autocomplete = accion === "entrar" ? "current-password" : "new-password";
+  $("estadoAcceso").hidden = true;
+});
+
+function avisoAcceso(t, tipo) { const e = $("estadoAcceso"); e.hidden = false; e.className = "aviso " + tipo; e.textContent = t; }
+
+const traducir = (m) => ({
+  "Invalid login credentials": "Correo o contraseña incorrectos.",
+  "User already registered": "Ya existe una cuenta con ese correo. Usa «Entrar».",
+  "Email not confirmed": "Tienes que confirmar tu correo: revisa tu bandeja de entrada.",
+}[m] || m);
+
+$("formAcceso").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const email = $("correo").value.trim(), password = $("clave").value;
+  if (!email || password.length < 8) return avisoAcceso("Escribe tu correo y una contraseña de al menos 8 caracteres.", "mal");
+  $("botonAcceso").disabled = true;
+  try {
+    if (accion === "registro") {
+      if (!$("nombre").value.trim()) throw new Error("Escribe tu nombre.");
+      if (!$("privacidad").checked) throw new Error("Marca la casilla de privacidad.");
+      const { data, error } = await sb.auth.signUp({ email, password,
+        options: { data: { nombre: $("nombre").value.trim(), entidad: $("entidad").value.trim() },
+                   emailRedirectTo: location.href.split("#")[0] } });
+      if (error) throw new Error(traducir(error.message));
+      if (!data.session) avisoAcceso("Cuenta creada. Te hemos enviado un correo para confirmarla.", "ok");
+    } else {
+      const { error } = await sb.auth.signInWithPassword({ email, password });
+      if (error) throw new Error(traducir(error.message));
+    }
+  } catch (e) { avisoAcceso(e.message, "mal"); }
+  finally { $("botonAcceso").disabled = false; }
+};
+
+$("salir").onclick = async (e) => { e.preventDefault(); await sb.auth.signOut(); };
+
+sb.auth.onAuthStateChange((_ev, sesion) => {
+  $("acceso").hidden = !!sesion;
+  $("zonaChat").hidden = !sesion;
+  if (sesion) {
+    const md = sesion.user.user_metadata || {};
+    $("quien").textContent = md.nombre || sesion.user.email;
+    setTimeout(() => $("pregunta").focus(), 50);
+  }
+});
+
+// ---------- Chat ----------
+function burbuja(clase, texto) {
+  const d = document.createElement("div");
+  d.className = "msg " + clase;
+  d.textContent = texto;
+  $("mensajes").appendChild(d);
+  d.scrollIntoView({ behavior: "smooth", block: "end" });
+  return d;
+}
+
+function referencias(fuentes) {
+  if (!fuentes?.length) return "";
+  return `<div class="refs"><b>Fuentes</b>${fuentes.map((f) => `<div>[${f.n}] ${
+    f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>` : esc(f.titulo)
+  }${f.autor ? " — " + esc(f.autor) : ""}${f.anio ? " (" + esc(f.anio) + ")" : ""} · ${esc(f.municipio)}</div>`).join("")}</div>`;
+}
+
+async function preguntar(texto) {
+  texto = texto.trim();
+  if (!texto) return;
+  burbuja("yo", texto);
+  $("pregunta").value = ""; ajustar();
+  const espera = burbuja("ia", "");
+  espera.innerHTML = `<span class="puntos">Buscando en la biblioteca</span>`;
+  $("enviar").disabled = true;
+  try {
+    const { data, error } = await sb.functions.invoke("preguntar", {
+      body: { pregunta: texto, municipio: $("municipio").value, historial },
+    });
+    if (error) throw new Error(await errorDe(error));
+    espera.textContent = data.respuesta;
+    espera.insertAdjacentHTML("beforeend", referencias(data.fuentes));
+    historial.push({ rol: "usuario", texto }, { rol: "asistente", texto: data.respuesta });
+    historial = historial.slice(-6);
+  } catch (e) {
+    espera.textContent = e.message;
+    espera.classList.add("aviso", "mal");
+  } finally {
+    $("enviar").disabled = false;
+    espera.scrollIntoView({ behavior: "smooth", block: "end" });
+  }
+}
+
+$("formPregunta").onsubmit = (ev) => { ev.preventDefault(); preguntar($("pregunta").value); };
+$("pregunta").addEventListener("keydown", (ev) => {
+  if (ev.key === "Enter" && !ev.shiftKey) { ev.preventDefault(); preguntar($("pregunta").value); }
+});
+function ajustar() { const t = $("pregunta"); t.style.height = "auto"; t.style.height = Math.min(t.scrollHeight, 160) + "px"; }
+$("pregunta").addEventListener("input", ajustar);
+document.querySelectorAll(".sugerencias button").forEach((b) => b.onclick = () => preguntar(b.textContent));
+$("nueva").onclick = () => {
+  historial = [];
+  [...$("mensajes").children].forEach((c) => { if (c.id !== "bienvenida") c.remove(); });
+};
+</script>
+</body>
+</html>

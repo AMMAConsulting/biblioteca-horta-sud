@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Aportar bibliografía</title>
+<link rel="stylesheet" href="estilo.css">
+</head>
+<body>
+<header class="cabecera"><div class="dentro">
+  <a class="marca" href="./"><span class="punto"></span>Biblioteca de L'Horta Sud</a>
+  <nav class="nav"><a class="activo" href="aportar.html">Aportar</a><a href="preguntar.html">Preguntar</a></nav>
+</div></header>
+
+<main>
+  <h1>Aportar bibliografía</h1>
+  <p class="intro">Cualquier persona puede aportar material sobre L'Horta Sud: estudios, memorias, planes, artículos, webs municipales…
+    Lo que subas servirá para que el asistente responda preguntas.</p>
+
+  <div class="rejilla" style="grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); align-items: start;">
+  <form class="tarjeta" id="form" novalidate>
+    <div class="pestanas" role="tablist">
+      <button type="button" class="activa" data-modo="archivo">Archivo</button>
+      <button type="button" data-modo="url">Enlace web</button>
+      <button type="button" data-modo="texto">Texto</button>
+    </div>
+
+    <div data-panel="archivo">
+      <label for="archivo">Archivo <span class="opc">(PDF, Word .docx, .txt, .md o .csv · máx. 15 MB)</span></label>
+      <input type="file" id="archivo" accept=".pdf,.docx,.txt,.md,.csv">
+    </div>
+    <div data-panel="url" hidden>
+      <label for="url">Dirección de la página</label>
+      <input type="url" id="url" placeholder="https://…">
+      <p class="ayuda">Se guarda el texto de la página tal como está hoy. Si el enlace es a un PDF, descárgalo y súbelo como archivo.</p>
+    </div>
+    <div data-panel="texto" hidden>
+      <label for="texto">Texto</label>
+      <textarea id="texto" placeholder="Pega o escribe aquí el contenido…"></textarea>
+    </div>
+
+    <label for="titulo">Título</label>
+    <input type="text" id="titulo" maxlength="300" required placeholder="p. ej. Plan Estratégico de Turismo de Torrent 2024">
+    <div class="fila">
+      <div><label for="municipio">Municipio</label><select id="municipio" required></select></div>
+      <div><label for="anio">Año <span class="opc">(opcional)</span></label><input type="number" id="anio" min="1000" max="2100" placeholder="2025"></div>
+    </div>
+    <div class="fila">
+      <div><label for="autor">Autor o entidad <span class="opc">(opcional)</span></label><input type="text" id="autor" maxlength="300"></div>
+      <div><label for="tema">Tema <span class="opc">(opcional)</span></label>
+        <input type="text" id="tema" maxlength="100" list="temas" placeholder="Turismo, historia…">
+        <datalist id="temas"><option>Turismo</option><option>Historia</option><option>Patrimonio</option><option>Economía</option>
+          <option>Medio ambiente</option><option>Huerta y agricultura</option><option>Movilidad</option><option>Población</option>
+          <option>Cultura y fiestas</option><option>Urbanismo</option><option>DANA 2024</option></datalist></div>
+    </div>
+    <label for="descripcion">Breve descripción <span class="opc">(opcional)</span></label>
+    <input type="text" id="descripcion" maxlength="1000">
+    <label for="aportado">Tu nombre o entidad <span class="opc">(opcional, se mostrará públicamente)</span></label>
+    <input type="text" id="aportado" maxlength="120">
+    <input type="text" id="web" class="trampa" tabindex="-1" autocomplete="off" aria-hidden="true">
+
+    <label class="check"><input type="checkbox" id="acepto">
+      <span>Confirmo que este material es público o que tengo permiso para compartirlo, y que no contiene datos personales.</span></label>
+
+    <div style="margin-top:18px"><button class="boton" id="enviar" type="submit">Aportar</button></div>
+    <div id="estado" class="aviso" hidden></div>
+  </form>
+
+  <section class="tarjeta">
+    <h2>Lo que ya hay</h2>
+    <div class="cifras" id="cifras"></div>
+    <select id="filtro" style="margin-bottom:6px"></select>
+    <ul class="lista" id="lista"><li class="m">Cargando…</li></ul>
+  </section>
+  </div>
+</main>
+<footer>Los documentos originales no se publican: solo su ficha. El asistente usa su texto para responder y cita la fuente. ¿Has visto algo que no debería estar? Escribe a AMMA Consulting y lo retiramos.</footer>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<script src="comun.js"></script>
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+const $ = (id) => document.getElementById(id);
+let modo = "archivo";
+rellenarMunicipios($("municipio"), "Elige…");
+rellenarMunicipios($("filtro"), "Todos los municipios");
+
+document.querySelectorAll(".pestanas button").forEach((b) => b.onclick = () => {
+  modo = b.dataset.modo;
+  document.querySelectorAll(".pestanas button").forEach((x) => x.classList.toggle("activa", x === b));
+  document.querySelectorAll("[data-panel]").forEach((p) => p.hidden = p.dataset.panel !== modo);
+});
+
+$("archivo").onchange = () => {
+  const f = $("archivo").files[0];
+  if (f && !$("titulo").value) $("titulo").value = f.name.replace(/\.[^.]+$/, "").replace(/[_-]+/g, " ");
+};
+
+function estado(texto, tipo) {
+  const e = $("estado"); e.hidden = false; e.className = "aviso " + tipo; e.textContent = texto;
+}
+
+async function textoDelArchivo(f, avance) {
+  const ext = f.name.toLowerCase().split(".").pop();
+  if (ext === "pdf") {
+    const pdf = await pdfjsLib.getDocument({ data: await f.arrayBuffer() }).promise;
+    const paginas = [];
+    for (let i = 1; i <= pdf.numPages; i++) {
+      avance(`Leyendo el PDF: página ${i} de ${pdf.numPages}…`);
+      const c = await (await pdf.getPage(i)).getTextContent();
+      let linea = "", texto = "";
+      for (const it of c.items) { linea += it.str; if (it.hasEOL) { texto += linea + "\n"; linea = ""; } }
+      paginas.push(texto + linea);
+    }
+    return paginas.join("\n\n");
+  }
+  if (ext === "docx") {
+    avance("Leyendo el documento Word…");
+    return (await mammoth.extractRawText({ arrayBuffer: await f.arrayBuffer() })).value;
+  }
+  return await f.text();
+}
+
+$("form").onsubmit = async (ev) => {
+  ev.preventDefault();
+  const fd = new FormData();
+  if (!$("titulo").value.trim()) return estado("Escribe un título.", "mal");
+  if (!$("municipio").value) return estado("Elige el municipio (o «Toda la comarca»).", "mal");
+  if (!$("acepto").checked) return estado("Marca la casilla de confirmación.", "mal");
+  $("enviar").disabled = true;
+  try {
+    if (modo === "archivo") {
+      const f = $("archivo").files[0];
+      if (!f) throw new Error("Elige un archivo.");
+      if (f.size > 15 * 1024 * 1024) throw new Error("El archivo supera los 15 MB.");
+      const texto = await textoDelArchivo(f, (t) => estado(t, "info"));
+      fd.append("archivo", f); fd.append("texto", texto);
+    } else if (modo === "url") {
+      if (!$("url").value.trim()) throw new Error("Escribe la dirección de la página.");
+      fd.append("url", $("url").value.trim());
+    } else {
+      fd.append("texto", $("texto").value);
+    }
+    for (const [k, id] of [["titulo", "titulo"], ["municipio", "municipio"], ["anio", "anio"], ["autor", "autor"],
+      ["tema", "tema"], ["descripcion", "descripcion"], ["aportado_por", "aportado"], ["web", "web"]]) fd.append(k, $(id).value);
+    fd.append("modo", modo); fd.append("acepto", "si");
+
+    estado("Guardando y preparando el texto para el asistente…", "info");
+    const { data, error } = await sb.functions.invoke("aportar", { body: fd });
+    if (error) throw new Error(await errorDe(error));
+    estado(`¡Gracias! Aportación guardada (${data.fragmentos} fragmentos). Ya se puede preguntar sobre ella.`, "ok");
+    ["titulo", "anio", "autor", "tema", "descripcion", "url", "texto", "archivo"].forEach((id) => $(id).value = "");
+    $("acepto").checked = false;
+    cargar();
+  } catch (e) {
+    estado(e.message || String(e), "mal");
+  } finally {
+    $("enviar").disabled = false;
+  }
+};
+
+let todas = [];
+async function cargar() {
+  const { data, error } = await sb.from("fuentes")
+    .select("titulo,autor,anio,municipio,tema,tipo,url,aportado_por,creado,n_caracteres")
+    .order("creado", { ascending: false }).limit(1000);
+  if (error) { $("lista").innerHTML = `<li class="m">No se ha podido cargar el catálogo.</li>`; return; }
+  todas = data; pintar();
+}
+function pintar() {
+  const m = $("filtro").value;
+  const v = m ? todas.filter((f) => f.municipio === m) : todas;
+  const munis = new Set(todas.map((f) => f.municipio));
+  $("cifras").innerHTML = `<div class="cifra"><b>${todas.length}</b><span>documentos</span></div>
+    <div class="cifra"><b>${munis.size}</b><span>municipios con material</span></div>`;
+  $("lista").innerHTML = v.length ? v.map((f) => `<li>
+      <div class="t">${f.url ? `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo)}</a>` : esc(f.titulo)}</div>
+      <div class="m"><span class="etiqueta">${esc(f.municipio)}</span>${f.tema ? `<span class="etiqueta">${esc(f.tema)}</span>` : ""}
+        ${[f.autor, f.anio].filter(Boolean).map(esc).join(" · ")}
+        ${f.aportado_por ? ` — aportado por ${esc(f.aportado_por)}` : ""}</div></li>`).join("")
+    : `<li class="m">Todavía no hay nada${m ? " de " + esc(m) : ""}. ¡Sé el primero en aportar!</li>`;
+}
+$("filtro").onchange = pintar;
+cargar();
+</script>
+</body>
+</html>
