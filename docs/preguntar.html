@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Preguntar a la biblioteca</title>
-<link rel="stylesheet" href="estilo.css?v=5">
+<link rel="stylesheet" href="estilo.css?v=6">
 </head>
 <body>
 <header class="cabecera"><div class="dentro">
@@ -78,14 +78,14 @@
           (Li et al., 2023, «Making AI Less Thirsty»): una media de <b>2,5 mL por Wh</b> (de 1,1 a 5).</p>
         <p>Por eso damos un valor central y una horquilla. La cifra real depende del centro de datos, del momento y del hardware, y puede estar en cualquier punto de ese rango.
           No incluye la energía usada para entrenar el modelo ni para fabricar los equipos.</p>
-        <p>Equivalencias: una bombilla LED de 10 W gasta 1 Wh en 6 minutos; una gota de agua son unos 0,05 mL.</p>
+        <p>Equivalencias: una bombilla LED de 10 W gasta 1 Wh en 6 minutos; una lata de refresco de 33 cl son 330 mL.</p>
       </details>
     </div>
   </section>
 </main>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
-<script src="comun.js?v=5"></script>
+<script src="comun.js?v=6"></script>
 <script>
 const $ = (id) => document.getElementById(id);
 let accion = "entrar";
@@ -227,7 +227,6 @@ function led(wh) {               // tiempo de una bombilla LED de 10 W
   const s = wh / 10 * 3600;
   return s < 60 ? `${num(Math.max(s, 0.1), s < 10 ? 1 : 0)} s` : `${num(s / 60, 1)} min`;
 }
-function gotas(ml) { const g = ml / 0.05; return g < 1 ? "menos de 1 gota" : `${num(g, 0)} gota${g >= 1.5 ? "s" : ""}`; }
 
 let total = { entrada: 0, salida: 0, wh: 0, ml: 0, preguntas: 0 };
 
@@ -239,7 +238,7 @@ function lineaConsumo(c) {
     <summary>🔢 ${num(c.tokens.total)} tokens · ⚡ ~${cifra(e.central)} Wh · 💧 ~${cifra(a.central)} mL</summary>
     <div>${num(c.tokens.entrada)} tokens leídos (pregunta y fragmentos) y ${num(c.tokens.salida)} generados (respuesta y razonamiento).</div>
     <div>Luz: entre ${cifra(e.min)} y ${cifra(e.max)} Wh ≈ una bombilla LED encendida ${led(e.central)}.</div>
-    <div>Agua: entre ${cifra(a.min)} y ${cifra(a.max)} mL ≈ ${gotas(a.central)}. Luz y agua son estimaciones.</div>
+    <div>Agua: entre ${cifra(a.min)} y ${cifra(a.max)} mL ≈ ${equivalenciaAgua(a.central)}. Luz y agua son estimaciones.</div>
   </details>`;
 }
 

@@ -35,7 +35,14 @@ window.equivalenciaLuz = (wh) => {          // bombilla LED de 10 W
   const min = wh / 10 * 60;
   return min < 60 ? `${fmt(min, min < 10 ? 1 : 0)} min` : min < 2880 ? `${fmt(min / 60, 1)} h` : `${fmt(min / 1440, 0)} días`;
 };
-window.equivalenciaAgua = (ml) => ml < 250 ? `${fmt(ml / 0.05, 0)} gotas` : `${fmt(ml / 250, ml < 2500 ? 1 : 0)} vasos`;
+window.equivalenciaAgua = (ml) => {        // lata de refresco de 33 cl (330 mL)
+  const latas = ml / 330;
+  if (latas < 1) {
+    const pct = latas * 100;
+    return pct < 0.1 ? "menos del 0,1 % de una lata de 33 cl" : `el ${fmt(pct, pct < 10 ? 1 : 0)} % de una lata de 33 cl`;
+  }
+  return `${fmt(latas, latas < 10 ? 1 : 0)} lata${latas >= 1.05 ? "s" : ""} de 33 cl`;
+};
 
 window.cargarEstadisticas = async () => {
   const { data, error } = await sb.rpc("estadisticas");
